@@ -21,9 +21,24 @@ namespace Project1.Controllers
         }
 
         // GET: Employees
-        public async Task<IActionResult> Index()
+        public async Task<IActionResult> Index(int page = 1)
         {
-            return View(await _context.Employees.ToListAsync());
+            int pageSize = 5; // records per page
+
+            var query = _context.Employees.AsQueryable();
+
+            int totalRecords = await query.CountAsync();
+
+            var employees = await query
+                .OrderBy(e => e.Id)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
+            ViewBag.CurrentPage = page;
+            ViewBag.TotalPages = (int)Math.Ceiling(totalRecords / (double)pageSize);
+
+            return View(employees);
         }
 
         // GET: Employees/Details/5

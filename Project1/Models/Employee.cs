@@ -11,10 +11,12 @@ namespace Project1.Models
 
         [Required]
         [StringLength(50)]
+        [Display(Name = "Employee Name")]
         public string Name { get; set; }
 
         [Required]
         [StringLength(50)]
+        [Display(Name = "Father Name")]
         public string FatherName { get; set; }
 
         [Required]
@@ -30,6 +32,7 @@ namespace Project1.Models
         [Required]
         [StringLength(50)]
         [EmailAddress(ErrorMessage = "Invalid Email Address")]
+        [Display(Name = "Email")]
         public string EmailId { get; set; }
 
         [Required]
@@ -47,6 +50,7 @@ namespace Project1.Models
         [Required]
         [Column(TypeName = "decimal(18,2)")]
         [Range(0, 9999999999999999.99, ErrorMessage = "Invalid Salary")]
+        [Display(Name = "Expected Salary")]
         public decimal ExpectedSalary { get; set; }
 
         public static ValidationResult ValidateAge(DateTime dob, ValidationContext context)
