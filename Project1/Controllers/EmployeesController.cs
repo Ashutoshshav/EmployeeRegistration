@@ -8,16 +8,17 @@ using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using Project1.Data;
 using Project1.Models;
+using Project1.Services.EmployeeService;
 
 namespace Project1.Controllers
 {
     public class EmployeesController : Controller
     {
-        private readonly ProjectDbContext _context;
+        private readonly IEmployeeService _service;
 
-        public EmployeesController(ProjectDbContext context)
+        public EmployeesController(IEmployeeService service)
         {
-            _context = context;
+            _service = service;
         }
 
         // GET: Employees
@@ -25,15 +26,7 @@ namespace Project1.Controllers
         {
             int pageSize = 5; // records per page
 
-            var query = _context.Employees.AsQueryable();
-
-            int totalRecords = await query.CountAsync();
-
-            var employees = await query
-                .OrderBy(e => e.Id)
-                .Skip((page - 1) * pageSize)
-                .Take(pageSize)
-                .ToListAsync();
+            var (employees, totalRecords) = await _service.GetPagedAsync(page, pageSize);
 
             ViewBag.CurrentPage = page;
             ViewBag.TotalPages = (int)Math.Ceiling(totalRecords / (double)pageSize);
@@ -42,15 +35,14 @@ namespace Project1.Controllers
         }
 
         // GET: Employees/Details/5
-        public async Task<IActionResult> Details(int? id)
+        public async Task<IActionResult> Details(int id)
         {
-            if (id == null)
+            if (id == null || id <= 0)
             {
                 return NotFound();
             }
 
-            var employee = await _context.Employees
-                .FirstOrDefaultAsync(m => m.Id == id);
+            var employee = await _service.GetByIdAsync(id);
             if (employee == null)
             {
                 return NotFound();
@@ -74,23 +66,23 @@ namespace Project1.Controllers
         {
             if (ModelState.IsValid)
             {
-                Console.WriteLine(JsonConvert.SerializeObject(employee));
-                await _context.Employees.AddAsync(employee);
-                await _context.SaveChangesAsync();
+                //Console.WriteLine(JsonConvert.SerializeObject(employee));
+                await _service.AddAsync(employee);
                 return RedirectToAction(nameof(Index));
             }
+
             return View(employee);
         }
 
         // GET: Employees/Edit/5
-        public async Task<IActionResult> Edit(int? id)
+        public async Task<IActionResult> Edit(int id)
         {
-            if (id == null)
+            if (id == null || id <= 0)
             {
                 return NotFound();
             }
 
-            var employee = await _context.Employees.FindAsync(id);
+            var employee = await _service.GetByIdAsync(id);
             if (employee == null)
             {
                 return NotFound();
@@ -114,12 +106,11 @@ namespace Project1.Controllers
             {
                 try
                 {
-                    _context.Update(employee);
-                    await _context.SaveChangesAsync();
+                    await _service.UpdateAsync(employee);
                 }
                 catch (DbUpdateConcurrencyException)
                 {
-                    if (!EmployeeExists(employee.Id))
+                    if (await EmployeeExists(employee.Id))
                     {
                         return NotFound();
                     }
@@ -134,15 +125,14 @@ namespace Project1.Controllers
         }
 
         // GET: Employees/Delete/5
-        public async Task<IActionResult> Delete(int? id)
+        public async Task<IActionResult> Delete(int id)
         {
-            if (id == null)
+            if (id == null || id <= 0)
             {
                 return NotFound();
             }
 
-            var employee = await _context.Employees
-                .FirstOrDefaultAsync(m => m.Id == id);
+            var employee = await _service.GetByIdAsync(id);
             if (employee == null)
             {
                 return NotFound();
@@ -156,19 +146,18 @@ namespace Project1.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
-            var employee = await _context.Employees.FindAsync(id);
+            var employee = await _service.GetByIdAsync(id);
             if (employee != null)
             {
-                _context.Employees.Remove(employee);
+                await _service.DeleteAsync(employee.Id);
             }
 
-            await _context.SaveChangesAsync();
             return RedirectToAction(nameof(Index));
         }
 
-        private bool EmployeeExists(int id)
+        private async Task<bool> EmployeeExists(int id)
         {
-            return _context.Employees.Any(e => e.Id == id);
+            return await _service.GetByIdAsync(id) != null ? true : false;
         }
     }
 }
